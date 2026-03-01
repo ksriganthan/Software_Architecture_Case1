@@ -1,7 +1,8 @@
 package com.example.software_architecture_case1.Service;
 
-import com.example.software_architecture_case1.RestClient.Consignment;
-import com.example.software_architecture_case1.RestClient.NewConsignment;
+import com.example.software_architecture_case1.DTO.Consignment;
+import com.example.software_architecture_case1.DTO.NewConsignment;
+import com.example.software_architecture_case1.DTO.ShippingResult;
 import com.example.software_architecture_case1.RestClient.SpeditionApiClient;
 import jakarta.ws.rs.ProcessingException;
 import jakarta.ws.rs.WebApplicationException;

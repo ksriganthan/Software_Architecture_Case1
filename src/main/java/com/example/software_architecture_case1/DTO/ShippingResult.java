@@ -1,4 +1,4 @@
-package com.example.software_architecture_case1.Service;
+package com.example.software_architecture_case1.DTO;
 
 public class ShippingResult {
 

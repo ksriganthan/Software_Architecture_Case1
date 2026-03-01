@@ -1,6 +1,6 @@
 package com.example.software_architecture_case1.Worker;
 
-import com.example.software_architecture_case1.Service.ShippingResult;
+import com.example.software_architecture_case1.DTO.ShippingResult;
 import com.example.software_architecture_case1.Service.ShippingService;
 import jakarta.ws.rs.ProcessingException;
 import jakarta.ws.rs.WebApplicationException;

@@ -1,4 +1,4 @@
-package com.example.software_architecture_case1.RestClient;
+package com.example.software_architecture_case1.DTO;
 
 
 
