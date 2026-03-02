@@ -36,7 +36,13 @@ public class ShippingExternalTaskHandler implements ExternalTaskHandler {
         System.out.println("email           : " + email);
 
         try {
+            // External-Task-ID als Idempotenz-Key: bei Retry wird dieselbe ID
+            // wiederverwendet → der Service erkennt den Doppelaufruf und
+            // gibt das gecachte Ergebnis zurück, ohne die Spedition erneut aufzurufen.
+            String idempotencyKey = externalTask.getId();
+
             ShippingResult result = shippingService.sendShippingOrder(
+                    idempotencyKey,
                     destination,
                     recepientPhone,
                     customerReference,
@@ -66,7 +72,7 @@ public class ShippingExternalTaskHandler implements ExternalTaskHandler {
             );
 
         } catch (WebApplicationException | ProcessingException e) {
-            // Technischer Fehler -> Retry Strategie (wie ihr es konzeptionell wolltet)
+            // Technischer Fehler -> Retry Strategie
             Integer retries = externalTask.getRetries();
             int remainingRetries = (retries == null) ? 3 : retries - 1;
 
