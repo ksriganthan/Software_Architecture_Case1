@@ -11,6 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ShippingService {
 
+    //Service-Schicht (Business Layer) - Schicht 2
     private final SpeditionApiClient apiClient;
 
     /**
@@ -18,6 +19,10 @@ public class ShippingService {
      * bereits erfolgreich ausgeführten Speditions-Aufrufs.
      * So wird bei einem Retry (z.B. wenn complete() an Camunda fehlschlug)
      * derselbe Auftrag NICHT nochmal an die Spedition geschickt.
+     *
+     * Warum?
+     * Wenn REST-Call erfolgreich war, aber externalTaskService.complete(...) scheitert,
+     * liefert Camunda dieselbe ExternalTask später erneut aus. Ohne Cache -> selber Auftrag würde 2x geschicht werden
      */
     private final ConcurrentHashMap<String, ShippingResult> idempotencyCache = new ConcurrentHashMap<>();
 
@@ -38,7 +43,8 @@ public class ShippingService {
                                             String customerReference,
                                             Long weight) {
 
-        // ── Idempotenz-Prüfung ──────────────────────────────────────
+        // ── 1) Idempotenz-Prüfung ──────────────────────────────────────
+        //Wenn wir diesen Task bereits erfolgreich bearbeitet haben, geben wir einfach das alte Resultat zurück.
         ShippingResult cached = idempotencyCache.get(idempotencyKey);
         if (cached != null) {
             System.out.println("[IDEMPOTENZ] Ergebnis für Key '" + idempotencyKey
@@ -50,7 +56,8 @@ public class ShippingService {
             return cached;
         }
 
-        // minimale fachliche Validierung
+        // ── 2) Minimale fachliche Validierung ──────────────────────────
+        // Ziel: offensichtliche Prozessdatenfehler früh abfangen -> kein Retry.
         if (customerReference == null || customerReference.isBlank()) {
             throw new IllegalArgumentException("customerReference is missing");
         }
@@ -64,7 +71,7 @@ public class ShippingService {
             throw new IllegalArgumentException("weight must be > 0");
         }
 
-        // Mapping -> Request DTO für Spedition
+        // ── 3) Mapping: Prozessdaten -> Request DTO ─────────────────────
         NewConsignment req = new NewConsignment();
         req.setDestination(destination);
         req.setRecepientPhone(recepientPhone);
@@ -72,6 +79,7 @@ public class ShippingService {
         req.setWeight(Math.toIntExact(weight)); // BPMN: long -> API: Integer
 
         try {
+            // ── 4) Technischer REST Call via API Client ──────────────────
             Consignment response = apiClient.requestConsignment(req);
 
             System.out.println("[SPEDITION] Response erhalten:");
@@ -79,7 +87,7 @@ public class ShippingService {
             System.out.println("  pickupdate   : " + response.getPickupdate());
             System.out.println("  deliverydate : " + response.getDeliverydate());
 
-            // Mapping -> fachliches Resultat
+            // ── 5) Mapping: Spedition Response -> internes Ergebnis ─────
             ShippingResult result = new ShippingResult(
                     true,
                     response.getOrderId(),
@@ -87,29 +95,32 @@ public class ShippingService {
                     response.getDeliverydate()
             );
 
-            // Ergebnis cachen, damit bei Retry kein Doppelauftrag entsteht
+            // ── 6) Cache speichern (Idempotenz) ─────────────────────────
+            // Wichtig: erst NACH erfolgreichem Call + Mapping speichern.
             idempotencyCache.put(idempotencyKey, result);
             return result;
 
         } catch (WebApplicationException e) {
-            // fachliche Ablehnung
+            // HTTP Fehler: kann fachlich oder technisch sein.
             if (e.getResponse() != null && e.getResponse().getStatus() == 501) {
-                //Konsolenausgabe
+                // 501-> "fachliche Absage"
+                // -> accepted=false, KEIN Retry, Gateway führt auf Hotline-Pfad.
                 System.out.println("[SPEDITION] Fachliche Absage erhalten (HTTP 501) -> accepted=false, kein Retry");
                 System.out.println("  customerReference: " + customerReference);
                 System.out.println("  destination     : " + destination);
                 System.out.println("  recepientPhone  : " + recepientPhone);
                 System.out.println("  weight          : " + weight);
-
+                // Auch rejected cachen
                 ShippingResult rejected = new ShippingResult(false, null, null, null);
                 idempotencyCache.put(idempotencyKey, rejected);
                 return rejected;
             }
             // alle anderen HTTP Fehler -> technisch
+            // -> Handler soll Retries/Incident steuern.
             throw e;
 
         } catch (ProcessingException e) {
-            // technisch (timeout, connection)
+            // Technische Fehler (Timeout / Connection) -> Handler macht Retry
             throw e;
         }
     }

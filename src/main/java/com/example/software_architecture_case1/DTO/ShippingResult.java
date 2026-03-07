@@ -1,5 +1,11 @@
 package com.example.software_architecture_case1.DTO;
 
+/**
+ * Internes Ergebnis-Objekt (Domain/Business DTO) für den weiteren Prozess.
+ * Idee:
+ *  * - Der Handler soll NICHT direkt mit "Consignment" arbeiten
+ */
+
 public class ShippingResult {
 
     private final boolean accepted;
@@ -14,6 +20,7 @@ public class ShippingResult {
         this.deliverydate = deliverydate;
     }
 
+    //true -> Spedition hat angenommen false -> Spedition hat fachlich abgelehnt (Gebiet)
     public boolean isAccepted() {
         return accepted;
     }

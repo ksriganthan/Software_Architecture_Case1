@@ -1,7 +1,7 @@
 package com.example.software_architecture_case1.DTO;
 
 
-
+// DTO (Data Transfer Object) für die Antwort der Spedition.
 public class Consignment {
 
 	private String orderId;

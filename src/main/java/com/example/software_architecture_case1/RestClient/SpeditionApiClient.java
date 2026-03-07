@@ -10,6 +10,7 @@ import jakarta.ws.rs.client.Entity;
 import jakarta.ws.rs.client.WebTarget;
 import jakarta.ws.rs.core.MediaType;
 
+//Technische Abstraktion (Adapter) zur Spedition-API - Schicht 3.
 public class SpeditionApiClient {
 
     private final String serviceUrl;
@@ -19,20 +20,24 @@ public class SpeditionApiClient {
     }
 
     public Consignment requestConsignment(NewConsignment request) {
+        // JAX-RS Client für HTTP Requests
         Client client = ClientBuilder.newClient();
         try {
+            // Base URL als Target
             WebTarget target = client.target(serviceUrl);
-
+            // POST mit JSON Body und erwarte JSON Response, gemappt auf Consignment.class
             return target.request(MediaType.APPLICATION_JSON)
                     .post(Entity.entity(request, MediaType.APPLICATION_JSON), Consignment.class);
 
         } catch (WebApplicationException e) {
             // HTTP Fehler (z.B. 501 = fachliche Ablehnung)
+            // -> wird bewusst nach oben geworfen, weil Service-Schicht entscheiden soll, ob fachlich/technisch
             throw e;
         } catch (ProcessingException e) {
-            // Timeout / Connection / DNS / etc.
+            // Technische Fehler: Timeout, Connection, SSL, DNS etc.
             throw e;
         } finally {
+            // Ressourcen sauber freigeben (wichtig bei vielen Calls)
             client.close();
         }
     }

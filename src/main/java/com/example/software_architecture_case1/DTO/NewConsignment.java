@@ -1,7 +1,7 @@
 package com.example.software_architecture_case1.DTO;
 
 
-// Geht an die Spedition via REST-SERVICE
+// DTO für den Request an die Spedition (Outbound Payload).
 public class NewConsignment {
 
 	private String destination;
