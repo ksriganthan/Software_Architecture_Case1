@@ -188,19 +188,39 @@ auf der Konsole.
 
 ## Konfiguration
 
-Die Endpunkte sind derzeit in `ShippingWorker` hart codiert:
+Endpunkte und Zugangsdaten liest `ShippingWorker` aus **Umgebungsvariablen** –
+so liegen keine Zugangsdaten im Repository:
+
+| Variable | Standard | Bedeutung |
+|---|---|---|
+| `CAMUNDA_BASE_URL` | `http://localhost:8080/engine-rest` | REST-API der Camunda-Engine |
+| `CAMUNDA_USER` | – | Benutzername für Basic Auth; leer = ohne Authentifizierung |
+| `CAMUNDA_PASSWORD` | – | zugehöriges Passwort |
+| `SPEDITION_URL` | `http://localhost:8080/v1/consignment/request` | Endpunkt des Speditions-Service |
+
+Beispiel:
+
+```bash
+export CAMUNDA_BASE_URL=http://<camunda-host>:8080/engine-rest
+```
+
+```bash
+export CAMUNDA_USER=group6 CAMUNDA_PASSWORD=<passwort>
+```
+
+```bash
+export SPEDITION_URL=http://<spedition-host>:8080/v1/consignment/request
+```
+
+Basic Auth wird nur aktiviert, wenn `CAMUNDA_USER` gesetzt ist. Fest im Code
+stehen weiterhin die betrieblichen Parameter:
 
 | Einstellung | Wert |
 |---|---|
-| Camunda REST-API | `http://<host>:8080/engine-rest` (Basic-Auth in der URL) |
-| Spedition-Endpoint | `http://<host>:8080/v1/consignment/request` |
 | Topic | `group6_transportauftrag` |
 | Lock Duration | 1 000 ms |
 | Async Response Timeout | 1 000 ms |
 | Retries / Backoff | 3 Versuche / 60 000 ms |
-
-Die Adressen zeigen auf das Laborsetup des Moduls und müssen für eine andere
-Umgebung angepasst werden.
 
 ---
 
@@ -208,9 +228,11 @@ Umgebung angepasst werden.
 
 Bewusst getroffene Vereinfachungen im Rahmen des Cases:
 
-- **Zugangsdaten hart codiert.** Camunda-Benutzer und Passwort stehen im
-  Klartext in der Base-URL in `ShippingWorker`. Ausserhalb des Laborsetups
-  gehören sie in Umgebungsvariablen oder eine externe Konfiguration.
+- **Zugangsdaten in der Git-Historie.** Camunda-Benutzer und Passwort standen
+  ursprünglich im Klartext in `ShippingWorker` und sind deshalb weiterhin in
+  älteren Commits enthalten. Der aktuelle Stand liest sie aus
+  Umgebungsvariablen; wer die alten Zugangsdaten schützen will, muss sie beim
+  Betreiber der Engine ändern lassen.
 - **Kein Spring-Boot-Kontext.** Das Projekt nutzt den Spring-Boot-Parent, es
   gibt aber keine mit `@SpringBootApplication` annotierte Klasse. Der
   vorhandene `contextLoads`-Test (`@SpringBootTest`) läuft deshalb nicht
